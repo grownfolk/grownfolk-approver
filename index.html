@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GrownFolk Approver</title>
+  <title>GrownFolk Admin</title>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 30px; }
@@ -26,6 +26,7 @@
       width: 300px;
     }
     .connected { margin-top: 10px; font-weight: bold; }
+    .error { color: red; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -33,6 +34,7 @@
   <button onclick="connectWallet()">Connect Wallet</button>
   <div class="connected" id="connectedAddress"></div>
   <button id="continueBtn" style="display:none;" onclick="showAdmin()">Return to App</button>
+  <div class="error" id="errorMessage"></div>
 
   <div id="adminSection" style="display:none;">
     <table id="requestsTable">
@@ -58,53 +60,28 @@
 
   <script>
     const contractAddress = "0xfED8423Fd087e7e03E4dA89c2dCBc5d3E8b5b826";
-    const contractABI = [
-      {
-        "inputs": [
-          { "internalType": "address", "name": "user", "type": "address" },
-          { "internalType": "string", "name": "name", "type": "string" }
-        ],
-        "name": "approveAndRegister",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "string", "name": "name", "type": "string" }],
-        "name": "revokeName",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
-        "name": "addApprover",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
-        "name": "removeApprover",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "address", "name": "user", "type": "address" }],
-        "name": "isApprover",
-        "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "address", "name": "wallet", "type": "address" }],
-        "name": "getPending",
-        "outputs": [{ "internalType": "string[]", "name": "", "type": "string[]" }],
-        "stateMutability": "view",
-        "type": "function"
-      }
-    ];
+    const contractABI = [{
+      "inputs": [
+        { "internalType": "address", "name": "user", "type": "address" },
+        { "internalType": "string", "name": "name", "type": "string" }
+      ],
+      "name": "approveAndRegister",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }, {
+      "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
+      "name": "addApprover",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }, {
+      "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
+      "name": "removeApprover",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }];
 
     let web3;
     let userAccount;
@@ -114,30 +91,21 @@
       { name: "uclick.weship", wallet: "0xdef456..." }
     ];
 
-    window.addEventListener("DOMContentLoaded", async () => {
-      if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
+    async function connectWallet() {
+      try {
+        if (window.ethereum) {
+          web3 = new Web3(window.ethereum);
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
           userAccount = accounts[0];
           document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
           contract = new web3.eth.Contract(contractABI, contractAddress);
           document.getElementById("continueBtn").style.display = "inline-block";
+          document.getElementById("errorMessage").innerText = "";
+        } else {
+          document.getElementById("errorMessage").innerText = "MetaMask not found. Install it to use this app.";
         }
-      }
-    });
-
-    async function connectWallet() {
-      if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        userAccount = accounts[0];
-        document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
-        contract = new web3.eth.Contract(contractABI, contractAddress);
-        document.getElementById("continueBtn").style.display = "inline-block";
-      } else {
-        alert("MetaMask not found. Please install MetaMask to continue.");
-        window.open("https://metamask.io", "_blank");
+      } catch (err) {
+        document.getElementById("errorMessage").innerText = "Connection error: " + err.message;
       }
     }
 
@@ -146,7 +114,7 @@
       loadRequests();
     }
 
-    async function loadRequests() {
+    function loadRequests() {
       const body = document.getElementById("requestsBody");
       body.innerHTML = "";
       mockRequests.forEach(req => {
