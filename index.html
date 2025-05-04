@@ -6,17 +6,25 @@
   <title>GrownFolk Approver</title>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 30px;
-    }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 30px; }
     h1 { color: #003366; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 10px; }
     th { background: #003366; color: white; }
-    button { padding: 6px 12px; background: #cc0000; color: white; border: none; cursor: pointer; }
-    input { padding: 6px; margin-top: 20px; margin-bottom: 10px; width: 300px; }
+    button {
+      padding: 6px 12px;
+      background: #cc0000;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    input {
+      padding: 6px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      width: 300px;
+    }
     .connected { margin-top: 10px; font-weight: bold; }
   </style>
 </head>
@@ -24,6 +32,7 @@
   <h1>Approve Name Requests</h1>
   <button onclick="connectWallet()">Connect Wallet</button>
   <div class="connected" id="connectedAddress"></div>
+  <button id="continueBtn" style="display:none;" onclick="showAdmin()">Return to App</button>
 
   <div id="adminSection" style="display:none;">
     <table id="requestsTable">
@@ -36,7 +45,7 @@
       </thead>
       <tbody id="requestsBody"></tbody>
     </table>
-    <button onclick="approveAll()" style="margin-top: 15px;">Approve All</button>
+    <button onclick="approveAll()">Approve All</button>
 
     <h2>Add New Approver</h2>
     <input type="text" id="newAdminAddress" placeholder="0x...wallet" />
@@ -113,8 +122,7 @@
           userAccount = accounts[0];
           document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
           contract = new web3.eth.Contract(contractABI, contractAddress);
-          document.getElementById("adminSection").style.display = "block";
-          loadRequests();
+          document.getElementById("continueBtn").style.display = "inline-block";
         }
       }
     });
@@ -122,17 +130,20 @@
     async function connectWallet() {
       if (window.ethereum) {
         web3 = new Web3(window.ethereum);
-        await window.ethereum.enable();
-        const accounts = await web3.eth.getAccounts();
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         userAccount = accounts[0];
         document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
         contract = new web3.eth.Contract(contractABI, contractAddress);
-        document.getElementById("adminSection").style.display = "block";
-        loadRequests();
+        document.getElementById("continueBtn").style.display = "inline-block";
       } else {
         alert("MetaMask not found. Please install MetaMask to continue.");
         window.open("https://metamask.io", "_blank");
       }
+    }
+
+    function showAdmin() {
+      document.getElementById("adminSection").style.display = "block";
+      loadRequests();
     }
 
     async function loadRequests() {
