@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GrownFolk Approver</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 30px;
+    }
+    h1 {
+      color: #003366;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    th {
+      background: #003366;
+      color: white;
+    }
+    button {
+      padding: 6px 12px;
+      background: #cc0000;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    input {
+      padding: 6px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      width: 300px;
+    }
+    .connected {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Approve Name Requests</h1>
+  <button onclick="connectWallet()">Connect Wallet</button>
+  <div class="connected" id="connectedAddress"></div>
+
+  <div id="adminSection" style="display:none;">
+    <table id="requestsTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Wallet</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="requestsBody"></tbody>
+    </table>
+    <button onclick="approveAll()" style="margin-top: 15px;">Approve All</button>
+
+    <h2>Add New Approver</h2>
+    <input type="text" id="newAdminAddress" placeholder="0x...wallet" />
+    <button onclick="addNewApprover()">Add Approver</button>
+
+    <h2>Remove Approver</h2>
+    <input type="text" id="removeAdminAddress" placeholder="0x...wallet" />
+    <button onclick="removeApprover()">Remove Approver</button>
+  </div>
+
+  <script>
+window.addEventListener("DOMContentLoaded", async () => {
+  if (window.ethereum) {
+    web3 = new Web3(window.ethereum);
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (accounts.length > 0) {
+      userAccount = accounts[0];
+      document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
+      contract = new web3.eth.Contract(contractABI, contractAddress);
+      document.getElementById("adminSection").style.display = "block";
+      loadRequests();
+    }
+  }
+});
+
+    const contractAddress = "YOUR_CONTRACT_ADDRESS";
+    const contractABI = YOUR_CONTRACT_ABI;
+
+    let web3;
+    let userAccount;
+    let contract;
+    let mockRequests = [
+      { name: "markus.grownfolk", wallet: "0xabc123..." },
+      { name: "uclick.weship", wallet: "0xdef456..." }
+    ];
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.enable();
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0];
+        document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
+        contract = new web3.eth.Contract(contractABI, contractAddress);
+        document.getElementById("adminSection").style.display = "block";
+        loadRequests();
+      } else {
+        alert("MetaMask not found.");
+      }
+    }
+
+    async function loadRequests() {
+      const body = document.getElementById("requestsBody");
+      body.innerHTML = "";
+      mockRequests.forEach(req => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${req.name}</td>
+          <td>${req.wallet}</td>
+          <td><button onclick="approveName('${req.wallet}', '${req.name}')">Approve</button></td>
+        `;
+        body.appendChild(row);
+      });
+    }
+
+    async function approveName(wallet, name) {
+      try {
+        await contract.methods.approveAndRegister(wallet, name).send({ from: userAccount });
+        alert("Approved: " + name);
+        loadRequests();
+      } catch (err) {
+        alert("Error approving: " + err.message);
+      }
+    }
+
+    async function approveAll() {
+      for (const req of mockRequests) {
+        try {
+          await contract.methods.approveAndRegister(req.wallet, req.name).send({ from: userAccount });
+        } catch (err) {
+          alert("Error approving: " + req.name);
+        }
+      }
+      alert("All approvals complete.");
+      loadRequests();
+    }
+
+    async function addNewApprover() {
+      const newAddress = document.getElementById("newAdminAddress").value;
+      try {
+        await contract.methods.addApprover(newAddress).send({ from: userAccount });
+        alert("Approver added: " + newAddress);
+      } catch (err) {
+        alert("Failed to add approver: " + err.message);
+      }
+    }
+
+    async function removeApprover() {
+      const removeAddress = document.getElementById("removeAdminAddress").value;
+      try {
+        await contract.methods.removeApprover(removeAddress).send({ from: userAccount });
+        alert("Approver removed: " + removeAddress);
+      } catch (err) {
+        alert("Failed to remove approver: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
