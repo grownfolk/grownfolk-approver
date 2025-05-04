@@ -3,8 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GrownFolk Admin</title>
+  <title>GrownFolk Approver</title>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+  <script>
+    // GrownFolk Hybrid Wallet Launcher
+    window.addEventListener("DOMContentLoaded", async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          web3 = new Web3(window.ethereum);
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            userAccount = accounts[0];
+            document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
+            contract = new web3.eth.Contract(contractABI, contractAddress);
+            document.getElementById("adminSection").style.display = "block";
+            loadRequests();
+          } else {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+          }
+        } catch (err) {
+          document.getElementById("errorMessage").innerText = "Connection error: " + err.message;
+        }
+      } else if (/iPhone|Android/i.test(navigator.userAgent)) {
+        window.location.href = "https://metamask.app.link/dapp/grownfolk.github.io/grownfolk-approver/";
+      } else {
+        const msg = document.createElement('div');
+        msg.innerHTML = `
+          <p style="margin-top:20px; color:#cc0000;">
+            No wallet detected. Install
+            <a href="https://metamask.io/download" target="_blank">MetaMask</a>
+            or use <a href="https://walletconnect.com/" target="_blank">WalletConnect</a>.
+          </p>`;
+        document.body.appendChild(msg);
+      }
+    });
+  </script>
   <style>
     body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 30px; }
     h1 { color: #003366; }
@@ -31,9 +64,7 @@
 </head>
 <body>
   <h1>Approve Name Requests</h1>
-  <button onclick="connectWallet()">Connect Wallet</button>
   <div class="connected" id="connectedAddress"></div>
-  <button id="continueBtn" style="display:none;" onclick="showAdmin()">Return to App</button>
   <div class="error" id="errorMessage"></div>
 
   <div id="adminSection" style="display:none;">
@@ -87,32 +118,8 @@
     let userAccount;
     let contract;
     let mockRequests = [
-      { name: "markus.grownfolk", wallet: "0xabc123..." },
-      { name: "uclick.weship", wallet: "0xdef456..." }
+      { name: "markus.grownfolk", wallet: "0x6C78de487b7ba21a6c387f193501e26e7a4ac6cb" }
     ];
-
-    async function connectWallet() {
-      try {
-        if (window.ethereum) {
-          web3 = new Web3(window.ethereum);
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          userAccount = accounts[0];
-          document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
-          contract = new web3.eth.Contract(contractABI, contractAddress);
-          document.getElementById("continueBtn").style.display = "inline-block";
-          document.getElementById("errorMessage").innerText = "";
-        } else {
-          document.getElementById("errorMessage").innerText = "MetaMask not found. Install it to use this app.";
-        }
-      } catch (err) {
-        document.getElementById("errorMessage").innerText = "Connection error: " + err.message;
-      }
-    }
-
-    function showAdmin() {
-      document.getElementById("adminSection").style.display = "block";
-      loadRequests();
-    }
 
     function loadRequests() {
       const body = document.getElementById("requestsBody");
