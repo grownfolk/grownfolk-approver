@@ -11,39 +11,13 @@
       background: #f4f4f4;
       padding: 30px;
     }
-    h1 {
-      color: #003366;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-    }
-    th {
-      background: #003366;
-      color: white;
-    }
-    button {
-      padding: 6px 12px;
-      background: #cc0000;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    input {
-      padding: 6px;
-      margin-top: 20px;
-      margin-bottom: 10px;
-      width: 300px;
-    }
-    .connected {
-      margin-top: 10px;
-      font-weight: bold;
-    }
+    h1 { color: #003366; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; }
+    th { background: #003366; color: white; }
+    button { padding: 6px 12px; background: #cc0000; color: white; border: none; cursor: pointer; }
+    input { padding: 6px; margin-top: 20px; margin-bottom: 10px; width: 300px; }
+    .connected { margin-top: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -74,22 +48,54 @@
   </div>
 
   <script>
-window.addEventListener("DOMContentLoaded", async () => {
-  if (window.ethereum) {
-    web3 = new Web3(window.ethereum);
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    if (accounts.length > 0) {
-      userAccount = accounts[0];
-      document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
-      contract = new web3.eth.Contract(contractABI, contractAddress);
-      document.getElementById("adminSection").style.display = "block";
-      loadRequests();
-    }
-  }
-});
-
-    const contractAddress = "YOUR_CONTRACT_ADDRESS";
-    const contractABI = YOUR_CONTRACT_ABI;
+    const contractAddress = "0xfED8423Fd087e7e03E4dA89c2dCBc5d3E8b5b826";
+    const contractABI = [
+      {
+        "inputs": [
+          { "internalType": "address", "name": "user", "type": "address" },
+          { "internalType": "string", "name": "name", "type": "string" }
+        ],
+        "name": "approveAndRegister",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "string", "name": "name", "type": "string" }],
+        "name": "revokeName",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
+        "name": "addApprover",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
+        "name": "removeApprover",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "user", "type": "address" }],
+        "name": "isApprover",
+        "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "wallet", "type": "address" }],
+        "name": "getPending",
+        "outputs": [{ "internalType": "string[]", "name": "", "type": "string[]" }],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ];
 
     let web3;
     let userAccount;
@@ -98,6 +104,20 @@ window.addEventListener("DOMContentLoaded", async () => {
       { name: "markus.grownfolk", wallet: "0xabc123..." },
       { name: "uclick.weship", wallet: "0xdef456..." }
     ];
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          userAccount = accounts[0];
+          document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
+          contract = new web3.eth.Contract(contractABI, contractAddress);
+          document.getElementById("adminSection").style.display = "block";
+          loadRequests();
+        }
+      }
+    });
 
     async function connectWallet() {
       if (window.ethereum) {
@@ -110,7 +130,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("adminSection").style.display = "block";
         loadRequests();
       } else {
-        alert("MetaMask not found.");
+        alert("MetaMask not found. Please install MetaMask to continue.");
+        window.open("https://metamask.io", "_blank");
       }
     }
 
