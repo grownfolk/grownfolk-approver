@@ -4,40 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GrownFolk Approver</title>
+
+  <!-- Web3 + WalletConnect -->
   <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
-  <script>
-    // GrownFolk Hybrid Wallet Launcher
-    window.addEventListener("DOMContentLoaded", async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          web3 = new Web3(window.ethereum);
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            userAccount = accounts[0];
-            document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
-            contract = new web3.eth.Contract(contractABI, contractAddress);
-            document.getElementById("adminSection").style.display = "block";
-            loadRequests();
-          } else {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-          }
-        } catch (err) {
-          document.getElementById("errorMessage").innerText = "Connection error: " + err.message;
-        }
-      } else if (/iPhone|Android/i.test(navigator.userAgent)) {
-        window.location.href = "https://metamask.app.link/dapp/grownfolk.github.io/grownfolk-approver/";
-      } else {
-        const msg = document.createElement('div');
-        msg.innerHTML = `
-          <p style="margin-top:20px; color:#cc0000;">
-            No wallet detected. Install
-            <a href="https://metamask.io/download" target="_blank">MetaMask</a>
-            or use <a href="https://walletconnect.com/" target="_blank">WalletConnect</a>.
-          </p>`;
-        document.body.appendChild(msg);
-      }
-    });
-  </script>
+  <script src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+
   <style>
     body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 30px; }
     h1 { color: #003366; }
@@ -70,11 +42,7 @@
   <div id="adminSection" style="display:none;">
     <table id="requestsTable">
       <thead>
-        <tr>
-          <th>Name</th>
-          <th>Wallet</th>
-          <th>Action</th>
-        </tr>
+        <tr><th>Name</th><th>Wallet</th><th>Action</th></tr>
       </thead>
       <tbody id="requestsBody"></tbody>
     </table>
@@ -91,28 +59,12 @@
 
   <script>
     const contractAddress = "0xfED8423Fd087e7e03E4dA89c2dCBc5d3E8b5b826";
-    const contractABI = [{
-      "inputs": [
-        { "internalType": "address", "name": "user", "type": "address" },
-        { "internalType": "string", "name": "name", "type": "string" }
-      ],
-      "name": "approveAndRegister",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }, {
-      "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
-      "name": "addApprover",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }, {
-      "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }],
-      "name": "removeApprover",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }];
+    const quickNode = "https://summer-omniscient-bush.matic.quiknode.pro/12ccb8b6f440bb8cca609715f48f3ea08e68199a/";
+    const contractABI = [
+      { "inputs": [{ "internalType": "address", "name": "user", "type": "address" }, { "internalType": "string", "name": "name", "type": "string" }], "name": "approveAndRegister", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+      { "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }], "name": "addApprover", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+      { "inputs": [{ "internalType": "address", "name": "_approver", "type": "address" }], "name": "removeApprover", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+    ];
 
     let web3;
     let userAccount;
@@ -120,6 +72,40 @@
     let mockRequests = [
       { name: "markus.grownfolk", wallet: "0x6C78de487b7ba21a6c387f193501e26e7a4ac6cb" }
     ];
+
+    const providerOptions = {
+      walletconnect: {
+        package: window.WalletConnectProvider.default,
+        options: {
+          rpc: { 137: quickNode },
+          chainId: 137
+        }
+      }
+    };
+
+    const web3Modal = new window.Web3Modal.default({
+      cacheProvider: false,
+      providerOptions
+    });
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const provider = await web3Modal.connect();
+        web3 = new Web3(provider);
+
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0];
+        document.getElementById("connectedAddress").innerText = "Connected: " + userAccount;
+
+        contract = new web3.eth.Contract(contractABI, contractAddress);
+        contract.options.from = userAccount;
+
+        document.getElementById("adminSection").style.display = "block";
+        loadRequests();
+      } catch (err) {
+        document.getElementById("errorMessage").innerText = "Connection error: " + err.message;
+      }
+    });
 
     function loadRequests() {
       const body = document.getElementById("requestsBody");
@@ -137,7 +123,7 @@
 
     async function approveName(wallet, name) {
       try {
-        await contract.methods.approveAndRegister(wallet, name).send({ from: userAccount });
+        await contract.methods.approveAndRegister(wallet, name).send();
         alert("Approved: " + name);
         loadRequests();
       } catch (err) {
@@ -148,7 +134,7 @@
     async function approveAll() {
       for (const req of mockRequests) {
         try {
-          await contract.methods.approveAndRegister(req.wallet, req.name).send({ from: userAccount });
+          await contract.methods.approveAndRegister(req.wallet, req.name).send();
         } catch (err) {
           alert("Error approving: " + req.name);
         }
@@ -160,7 +146,7 @@
     async function addNewApprover() {
       const newAddress = document.getElementById("newAdminAddress").value;
       try {
-        await contract.methods.addApprover(newAddress).send({ from: userAccount });
+        await contract.methods.addApprover(newAddress).send();
         alert("Approver added: " + newAddress);
       } catch (err) {
         alert("Failed to add approver: " + err.message);
@@ -170,7 +156,7 @@
     async function removeApprover() {
       const removeAddress = document.getElementById("removeAdminAddress").value;
       try {
-        await contract.methods.removeApprover(removeAddress).send({ from: userAccount });
+        await contract.methods.removeApprover(removeAddress).send();
         alert("Approver removed: " + removeAddress);
       } catch (err) {
         alert("Failed to remove approver: " + err.message);
